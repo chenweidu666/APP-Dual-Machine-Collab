@@ -74,3 +74,13 @@ Ubuntu 的 freerdp3 编译时 `WITH_GFX_H264=OFF` 只能软编导致卡顿、且
 - 主机：Ubuntu 26.04.1 LTS + GNOME Shell 50.1（Wayland）+ Deskflow 1.26.0
 - Surface：Ubuntu 24.04.4 LTS + linux-surface 6.18.7（X11）+ barrier 2.4.0
 - 第三方参考源：`sun`（Edge 收藏夹来源机）
+
+## 命名约定
+
+沿用 `~/Linux-App` 的编号规范：
+
+| 位置 | 名称 |
+|---|---|
+| 本地文件夹 | `12-Dual-Machine-Collab`（`NN-PascalCase`，05/11 已被占用，本仓库取 12） |
+| 远程仓库 | `APP-Dual-Machine-Collab`（`APP-` 前缀，与 `APP-Baton`、`APP-System-Monitor-Bar` 一致） |
+
