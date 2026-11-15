@@ -1,0 +1,14 @@
+[Unit]
+Description=Barrier client (Surface 作为被控端，键鼠共享)
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+Environment=DISPLAY=:0
+ExecStart=/usr/bin/barrierc -f --name chenwei-Surface-Pro --disable-crypto --no-tray 192.168.100.188:24800
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=graphical-session.target

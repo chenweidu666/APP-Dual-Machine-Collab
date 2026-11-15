@@ -1,0 +1,14 @@
+[Unit]
+Description=Deskflow server (鼠标键盘共享 - 本机为服务端)
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/deskflow-core server -s %h/.config/Deskflow/Deskflow.conf
+ExecStartPost=/usr/bin/systemd-run --user --unit=deskflow-autogrant --collect --quiet /home/chenwei/bin/deskflow-autogrant.sh
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=graphical-session.target

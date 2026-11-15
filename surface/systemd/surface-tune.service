@@ -1,0 +1,11 @@
+[Unit]
+Description=Surface Pro 5 CPU frequency tune (remove artificial pstate caps)
+After=multi-user.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/surface-tune.sh balanced
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

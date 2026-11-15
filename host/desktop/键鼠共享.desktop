@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=键鼠共享
+Comment=一键开关：主机键鼠 ↔ Surface（Deskflow，剪贴板共享）
+Exec=/home/chenwei/bin/kvm-share.sh toggle
+Icon=input-keyboard
+Terminal=false
+Categories=Utility;

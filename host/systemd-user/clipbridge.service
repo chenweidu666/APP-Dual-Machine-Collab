@@ -1,0 +1,13 @@
+[Unit]
+Description=Clipboard bridge (主机 Wayland <-> Surface X11，纯文本剪贴板双向同步)
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/home/chenwei/bin/clipbridge.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=graphical-session.target
