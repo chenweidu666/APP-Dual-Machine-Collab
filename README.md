@@ -1,7 +1,7 @@
 # 双机协同（主机 i5-5200u + Surface Pro 5）
 
 一台 Linux 主机 + 一台 Surface（装 Ubuntu + linux-surface）的日常协同工具集。
-目标：**一套键鼠控两台、剪贴板互通、收藏夹一致**，外加 Surface 的性能调优。
+目标：**一套键鼠控两台、收藏夹一致**，外加 Surface 的性能调优。（剪贴板同步已移除，原因见下）
 
 ```
         ┌────────────────────────────┐        ┌────────────────────────────┐
@@ -9,7 +9,6 @@
         │                            │        │                            │
         │  deskflow-server  ─────────┼───────▶│  barrierc (协议 v1.8)       │
         │    libei + portal 抓输入    │  24800 │    XTest 注入输入           │
-        │  clipbridge (wl-clipboard) │◀──────▶│  xclip                     │
         │  ydotool + autogrant       │  ssh   │  surface-tune (pstate)     │
         └────────────────────────────┘        └────────────────────────────┘
                     │                                      ▲
@@ -19,7 +18,7 @@
 ## 目录
 
 ```
-kvm-share/                 # 键鼠共享 + 剪贴板桥（Deskflow + 自建桥）
+kvm-share/                 # 键鼠共享（Deskflow 服务端 + 客户端）
   README.md                #   详细说明、踩坑、排障
   install-host.sh          #   主机一键安装
   install-surface.sh       #   Surface 一键安装（scp 过去执行）
@@ -35,7 +34,6 @@ edge-bookmarks/            # Edge 收藏夹同步（多机整份覆盖 + 备份�
 | 能力 | 命令 / 位置 | 说明 |
 |---|---|---|
 | 键鼠共享 | 桌面图标 `键鼠共享`，或 `~/bin/kvm-share.sh toggle` | 光标推过主机**下边缘**进 Surface，推回上边缘回来 |
-| 剪贴板 | `clipbridge`（**默认不建议启用**） | 双向文本同步，约 1 秒延迟；已知会打断 fcitx5 组字，见下方「安全与已知问题」 |
 | 收藏夹同步 | `edge-bookmarks/edge-bookmark-sync.sh` | 以 `sun` 为准整份覆盖本机 + Surface，自动备份可回滚 |
 | 状态一眼看 | 右上角托盘 `⌨ KVM` | `KVM` 已连 / `KVM…` 等待 / `KVM —` 关闭，点击可开关 |
 
@@ -58,7 +56,6 @@ cd ../edge-bookmarks && ./edge-bookmark-sync.sh
 |---|---|---|
 | `deskflow-server` (systemd user) | 主机 | 抓全局输入（libei），监听 24800 |
 | `deskflow-autogrant.sh` | 主机 | 自动确认 GNOME「Capture Input」门户对话框（ydotool 播键） |
-| `clipbridge` (systemd user) | 主机 | 剪贴板双向桥（wl-clipboard ↔ xclip，常驻 ssh） |
 | `ydotool` (systemd user) | 主机 | uinput 虚拟输入，供自动授权使用 |
 | `barrier-client` (systemd user) | Surface | 连主机 24800，XTest 注入输入 |
 | `surface-tune.sh` (systemd) | Surface | 解除 pstate 频率上限：满载 900 MHz → 1.7 GHz |
@@ -79,9 +76,9 @@ Ubuntu 的 freerdp3 编译时 `WITH_GFX_H264=OFF` 只能软编导致卡顿、且
   Surface 侧 `barrierc` 带 `--disable-crypto`。会话内容在网络上不加密。
 - **自动授权**：`deskflow-autogrant.sh` 用 ydotool 自动点掉 GNOME 的「Capture Input」门户对话框，
   等于跳过人工确认。理解含义后再启用（不装则每次连接手点一下即可）。
-- **剪贴板桥已废弃**：`clipbridge` 每秒 `wl-paste` / `xclip -o` 各一次，并在同步时抢一次剪贴板
-  selection 所有权。实测会让 fcitx5 的组字状态被打断（打字打到一半被吞）。**新装默认不要启用**，
-  详见 [`kvm-share/README.md`](kvm-share/README.md) 的「剪贴板桥的坑」。
+- **没有剪贴板同步**：早期实现过 `clipbridge`（每秒 `wl-paste` / `xclip -o` 各一次，同步时抢一次
+  剪贴板 selection 所有权），实测会打断 fcitx5 的组字（打字打到一半被吞），已**整体移除**。
+  现在两台机器之间的剪贴板互不相通，这是刻意的取舍。
 - **主机名/IP/ssh 别名是作者环境的写法**：`i5-5200u`、`chenwei-Surface-Pro`、`192.168.100.188`、
   `surface`、`sun`，直接套用前请替换成你自己的（`install-host.sh` / `install-surface.sh` 支持用
   `PEER=` / `HOST_IP=` 覆盖）。

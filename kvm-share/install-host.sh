@@ -1,5 +1,5 @@
 #!/bin/bash
-# 主机端安装：Deskflow 服务端 + 剪贴板桥 + 自动授权 + 桌面图标
+# 主机端安装：Deskflow 服务端 + 自动授权 + 桌面图标
 set -euo pipefail
 
 here=$(cd "$(dirname "$0")" && pwd)
@@ -9,12 +9,12 @@ PEER_NAME=${PEER_NAME:-}       # 留空则执行时尝试 ssh 取 hostname
 
 echo "== 依赖检查 =="
 missing=()
-for c in deskflow-core ydotool wl-copy wl-paste ssh; do
+for c in deskflow-core ydotool ssh; do
     command -v "$c" >/dev/null || missing+=("$c")
 done
 if [ ${#missing[@]} -gt 0 ]; then
     echo "缺少: ${missing[*]}"
-    echo "请先执行: sudo apt install deskflow ydotool wl-clipboard openssh-client"
+    echo "请先执行: sudo apt install deskflow ydotool openssh-client"
     exit 1
 fi
 
@@ -49,7 +49,6 @@ systemctl --user daemon-reload
 systemctl --user enable --now ydotool 2>/dev/null || true
 systemctl --user enable --now deskflow-server
 sleep 2
-systemctl --user enable --now clipbridge
 systemctl --user enable --now kvm-indicator
 
 echo "== 桌面图标 =="
@@ -59,7 +58,7 @@ gio set "$HOME/Desktop/键鼠共享.desktop" metadata::trusted true 2>/dev/null 
 
 echo
 echo "完成。状态："
-systemctl --user is-active deskflow-server clipbridge ydotool | paste -sd' ' -
+systemctl --user is-active deskflow-server ydotool kvm-indicator | paste -sd' ' -
 echo "桌面图标: ~/Desktop/键鼠共享.desktop（点一下开关）"
 echo "顶栏状态: 右上角托盘「⌨ KVM」，点击可开关"
 echo "命令行:   ~/bin/kvm-share.sh [toggle|start|stop|status]"

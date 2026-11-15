@@ -1,7 +1,10 @@
 # Surface KVM Share
 
-把一台 **Linux 主机（GNOME/Wayland）** 的键盘、鼠标、剪贴板共享给一台 **Surface（Linux/X11）**，
-效果对标 macOS 的 Universal Control：一套键鼠，光标从主机屏幕边缘滑进另一台机器，剪贴板双向互通。
+把一台 **Linux 主机（GNOME/Wayland）** 的键盘、鼠标共享给一台 **Surface（Linux/X11）**，
+效果对标 macOS 的 Universal Control：一套键鼠，光标从主机屏幕边缘滑进另一台机器。
+
+> **不含剪贴板同步**：曾经实现过 `clipbridge`，但它会打断 fcitx5 的组字（详见文末「剪贴板为什么被移除」），
+> 已整体删除。两台机器之间剪贴板互不相通。
 
 配套 `surface-tune.sh` 解决 Surface 无风扇机型被固件/pstate 压到 900 MHz 的问题。
 
@@ -12,7 +15,6 @@
         │  deskflow-server  ─────────┼───────▶│  barrierc (协议 v1.8)       │
         │    libei + portal 抓输入    │  24800 │    XTest 注入输入           │
         │                            │        │                            │
-        │  clipbridge (wl-clipboard) │◀──────▶│  xclip                     │
         │  ydotool + autogrant       │  ssh   │                            │
         └────────────────────────────┘        └────────────────────────────┘
 ```
@@ -25,7 +27,9 @@
 - Ubuntu 的 `freerdp3` 编译时 `WITH_GFX_H264=OFF`，无法走 H.264 硬编，只能软编 → 卡顿
 - 只是"多一块屏"，不是"一套键鼠控两台机器"
 
-所以最终方案是 **Deskflow（键鼠共享）+ 自建剪贴板桥**。
+所以最终方案是 **Deskflow 键鼠共享**（主机做服务端，Surface 用 barrier 客户端）。
+
+> 早期还自建了剪贴板桥 `clipbridge`，后来因为**会打断中文输入法**被整体移除，原因见文末。
 
 ## 目录结构
 
@@ -33,12 +37,11 @@
 bin/kvm-indicator.py           # 右上角托盘状态图标（host/client 两种角色）
 host/                          # 装在主机（键鼠所在的机器）
   bin/kvm-share.sh             # 开关脚本：toggle/start/stop/status
-  bin/clipbridge.sh            # 剪贴板双向同步桥
   bin/deskflow-autogrant.sh    # 自动确认 GNOME 的「Capture Input」授权对话框
-  deskflow/Deskflow.conf       # Deskflow 主配置（服务端模式、关 TLS、开剪贴板）
+  deskflow/Deskflow.conf       # Deskflow 主配置（服务端模式、关 TLS）
   deskflow/screen-layout.conf  # 屏幕拓扑（上下排布）
   desktop/键鼠共享.desktop      # 桌面图标（点一下开关共享）
-  systemd-user/*.service       # deskflow-server / clipbridge / kvm-indicator
+  systemd-user/*.service       # deskflow-server / kvm-indicator
 surface/                       # 装在 Surface（被控端）
   bin/surface-tune.sh          # 解除 pstate 频率上限（perf/balanced/powersave）
   systemd/barrier-client.service
@@ -54,7 +57,7 @@ install-surface.sh             # Surface 一键安装（可直接 scp 过去跑�
 
 | 图标 | 文字 | 含义 |
 |---|---|---|
-| ⌨ | `KVM` | 已连接，键鼠+剪贴板共享中 |
+| ⌨ | `KVM` | 已连接，键鼠共享中 |
 | ⓘ | `KVM…` | 服务已起，等待对端连接 |
 | ⛔ | `KVM —` | 已关闭，键鼠只在本机 |
 
@@ -74,16 +77,15 @@ install-surface.sh             # Surface 一键安装（可直接 scp 过去跑�
 |---|---|---|
 | 主机 | `deskflow` | 键鼠共享服务端（Ubuntu 26.04 源里有 1.26） |
 | 主机 | `ydotool` | uinput 虚拟输入，用于自动确认门户对话框 |
-| 主机 | `wl-clipboard` | `wl-copy` / `wl-paste`，剪贴板读写 |
-| 主机 | `openssh-client` | 连 Surface 起客户端、传剪贴板 |
+| 主机 | `openssh-client` | 连 Surface 起客户端、查状态 |
 | Surface | `barrier` | 客户端（Ubuntu 24.04 源里 2.4.0，走 Barrier 协议） |
-| Surface | `xclip` `xdotool` | 剪贴板读写 / 测试 |
+| Surface | `xdotool` | 输入测试 / 调试 |
 
 ```bash
 # 主机
-sudo apt install deskflow ydotool wl-clipboard
+sudo apt install deskflow ydotool openssh-client
 # Surface
-sudo apt install barrier xclip xdotool
+sudo apt install barrier xdotool
 ```
 
 ## 安装
@@ -101,7 +103,6 @@ sudo apt install barrier xclip xdotool
 ## 使用
 
 - **光标切换**：鼠标推向主机屏幕**下边缘** → 进入 Surface；从 Surface **上边缘**推回
-- **剪贴板**：任一机器复制文本，另一台直接粘贴（约 1 秒延迟，仅文本）
 - **桌面图标**：`键鼠共享` —— 点一下切换开/关（会弹通知）
 - **命令行**：
 
@@ -147,36 +148,27 @@ GNOME 会弹 **「Capture Input / Allow Remote Input Capturing」** 模态框，
 **最稳的用法**：托盘图标 → 开启共享 → 弹出的对话框上点一次 **Share**（开关默认已开）。
 每次 deskflow 重新启动（含每次登录）需要点这一次，这是 GNOME 的安全门，`sudo` 绕不过。
 
-### 3. 剪贴板为什么要自己写桥
+### 3. 剪贴板为什么被移除
 
 Deskflow 的 Wayland 后端（libei）**只处理输入**，二进制里没有任何 `ext-data-control` 相关符号，
 所以剪贴板在 GNOME Wayland 主机上完全不工作（实测两个方向都不同步）。
 
-`clipbridge.sh` 的做法：
+早期为此自建了 `clipbridge`：主机侧 `wl-paste` 每秒轮询 → 变化则 base64 经 ssh 推到 Surface 调 `xclip`；
+Surface 侧一条常驻 ssh 里每秒轮询 `xclip -o` → 变化则回传调用 `wl-copy`。
 
-- 主机侧 `wl-paste` 轮询（1s）→ 变化则 base64 经 ssh 推到 Surface → `xclip`
-- Surface 侧一条常驻 ssh 里轮询 `xclip -o` → 变化则回传 → 主机 `wl-copy`
-- 用「最后同步内容」文件做去环；**只有写入成功才更新状态**（早期版本先更新状态导致失败后不再重试）
-- 启动时以主机剪贴板为基准，避免被 Surface 上的旧内容覆盖
+**它有致命副作用：打断中文输入法。** 实测（GNOME Wayland + fcitx5）会把字打一半吞掉，
+原因有两条：
 
-#### ⚠️ 剪贴板桥的坑：会打断中文输入法
+- 桥每秒读一次剪贴板，**同步时还会 `wl-copy` 抢一次剪贴板 selection 所有权**；
+- 主机是 Wayland 会话，但 fcitx5 同时挂着 X11 兼容通道（`classicui for x11 display`），
+  selection 每秒被改动一次，组字上下文就被重置了。
 
-实测结论（GNOME Wayland + fcitx5）：启用 `clipbridge` 后，打字会「打一半被吞 / 组字被打断」。
+加上 4 线程低功耗机器上每秒 `wl-paste` + 对端 `xclip` 进程 + 一条常驻 ssh 的开销，
+最终**决定整体删掉剪贴板同步**，只保留键鼠共享。Deskflow 自带的 `clipboardSharing`
+同样保持 `false`（Wayland 主机上本来也不工作，且有相同的抢 selection 副作用）。
 
-原因：桥每秒读一次剪贴板，**在同步时还会 `wl-copy` 抢一次剪贴板 selection 的所有权**；
-主机是 Wayland 会话但 fcitx5 同时挂着 X11 兼容通道（`classicui for x11 display`），
-selection 每秒被改动一次，组字上下文就被重置了。叠加 4 线程低功耗机器上的每秒
-`wl-paste` + 对端 `xclip` 进程 + 常驻 ssh，开销也不小。
-
-因此**默认不要装 `clipbridge`**。`install-host.sh` 会装它，不想要就别执行那一步，
-或者：
-
-```bash
-systemctl --user disable --now clipbridge
-```
-
-Deskflow 自带的 `clipboardSharing`（在 `screen-layout.conf` 里）也建议保持 `false` ——
-在 Wayland 主机上它本来就不工作，且同样有抢 selection 的副作用。
+如果你确实需要剪贴板互通，建议走**网络剪贴板**思路（如 `syncthing` 同步一个文本文件），
+而不是周期性抢占 selection 所有权。
 
 ### 4. Surface 频率为什么被压
 
@@ -197,15 +189,13 @@ sudo surface-tune.sh powersave   # 最省电
 |---|---|
 | 光标不跨屏 | `journalctl --user -u deskflow-server -n 30 \| grep -E 'switch\|error'` |
 | 授权对话框反复弹 | `cat /tmp/deskflow-autogrant.log`，确认有 `已发送确认按键` |
-| 剪贴板不动 | `tail -20 /tmp/clipbridge.log`；确认 `wl-paste` 能读到内容 |
 | 服务端没监听 | `ss -ltn \| grep 24800`；`systemctl --user status deskflow-server` |
 | 客户端连不上 | `ssh surface 'journalctl --user -u barrier-client -n 30 --no-pager'` |
 | Surface 卡 | `ssh surface 'grep "cpu MHz" /proc/cpuinfo; sensors \| grep Package'` |
 
 ## 已知限制
 
-- 剪贴板**仅文本**，图片/文件不支持（Deskflow 本身也不支持文件传输）
-- 剪贴板轮询间隔 1 秒，大段文本有可感延迟
+- **不支持剪贴板互通**（已刻意移除，见上）
 - 屏幕拓扑写死在 `screen-layout.conf`（`i5-5200u` / `chenwei-Surface-Pro`），换机器要改名字
 - 主机若是纯 Wayland 且 GNOME 版本低于 46，libei 抓取不可用（本项目在 GNOME 50 上验证）
 - Surface 端用的是 `barrier` 2.4 老客户端（Deskflow 1.27 没有 noble 的 deb），协议兼容但功能受限

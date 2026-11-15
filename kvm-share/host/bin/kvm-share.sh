@@ -17,7 +17,7 @@ case "${1:-toggle}" in
       systemctl --user start deskflow-server
       ssh -o BatchMode=yes -o ConnectTimeout=4 "$SURFACE" 'systemctl --user start barrier-client' 2>/dev/null
       sleep 2
-      if srv_active; then say "已开启：鼠标往下推 → 进入 Surface（剪贴板共享中）"; else say "启动失败，看 journalctl --user -u deskflow-server"; fi
+      if srv_active; then say "已开启：鼠标往下推 → 进入 Surface"; else say "启动失败，看 journalctl --user -u deskflow-server"; fi
       ;;
   stop)
       ssh -o BatchMode=yes -o ConnectTimeout=4 "$SURFACE" 'systemctl --user stop barrier-client' 2>/dev/null

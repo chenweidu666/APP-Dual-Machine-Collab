@@ -30,7 +30,7 @@ APP_ID = "kvm-share-indicator"
 ICON = {"on": "input-keyboard", "wait": "dialog-information", "off": "network-offline"}
 LABEL = {"on": "KVM", "wait": "KVM…", "off": "KVM —"}
 TEXT = {
-    "on": "已连接：键鼠与剪贴板共享中",
+    "on": "已连接：键鼠共享中",
     "wait": "服务已启动，等待(或正在)连接对端",
     "off": "已关闭，键鼠只在本机",
 }
