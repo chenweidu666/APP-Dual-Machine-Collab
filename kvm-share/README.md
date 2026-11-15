@@ -159,6 +159,25 @@ Deskflow 的 Wayland 后端（libei）**只处理输入**，二进制里没有�
 - 用「最后同步内容」文件做去环；**只有写入成功才更新状态**（早期版本先更新状态导致失败后不再重试）
 - 启动时以主机剪贴板为基准，避免被 Surface 上的旧内容覆盖
 
+#### ⚠️ 剪贴板桥的坑：会打断中文输入法
+
+实测结论（GNOME Wayland + fcitx5）：启用 `clipbridge` 后，打字会「打一半被吞 / 组字被打断」。
+
+原因：桥每秒读一次剪贴板，**在同步时还会 `wl-copy` 抢一次剪贴板 selection 的所有权**；
+主机是 Wayland 会话但 fcitx5 同时挂着 X11 兼容通道（`classicui for x11 display`），
+selection 每秒被改动一次，组字上下文就被重置了。叠加 4 线程低功耗机器上的每秒
+`wl-paste` + 对端 `xclip` 进程 + 常驻 ssh，开销也不小。
+
+因此**默认不要装 `clipbridge`**。`install-host.sh` 会装它，不想要就别执行那一步，
+或者：
+
+```bash
+systemctl --user disable --now clipbridge
+```
+
+Deskflow 自带的 `clipboardSharing`（在 `screen-layout.conf` 里）也建议保持 `false` ——
+在 Wayland 主机上它本来就不工作，且同样有抢 selection 的副作用。
+
 ### 4. Surface 频率为什么被压
 
 Surface Pro 5（i5-7300U）默认被限制成：`no_turbo=1`、`max_perf_pct=60`、`EPP=power`、`platform_profile=balanced`

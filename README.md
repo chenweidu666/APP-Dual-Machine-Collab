@@ -35,7 +35,7 @@ edge-bookmarks/            # Edge 收藏夹同步（多机整份覆盖 + 备份�
 | 能力 | 命令 / 位置 | 说明 |
 |---|---|---|
 | 键鼠共享 | 桌面图标 `键鼠共享`，或 `~/bin/kvm-share.sh toggle` | 光标推过主机**下边缘**进 Surface，推回上边缘回来 |
-| 剪贴板 | 自动（`clipbridge` 服务） | 双向文本同步，约 1 秒延迟，不支持图片/文件 |
+| 剪贴板 | `clipbridge`（**默认不建议启用**） | 双向文本同步，约 1 秒延迟；已知会打断 fcitx5 组字，见下方「安全与已知问题」 |
 | 收藏夹同步 | `edge-bookmarks/edge-bookmark-sync.sh` | 以 `sun` 为准整份覆盖本机 + Surface，自动备份可回滚 |
 | 状态一眼看 | 右上角托盘 `⌨ KVM` | `KVM` 已连 / `KVM…` 等待 / `KVM —` 关闭，点击可开关 |
 
@@ -70,6 +70,21 @@ cd ../edge-bookmarks && ./edge-bookmark-sync.sh
 早期试过 GNOME 远程桌面（`screen-share-mode=extend` 虚拟显示器），能当扩展屏但：光标在扩展屏不可见、
 Ubuntu 的 freerdp3 编译时 `WITH_GFX_H264=OFF` 只能软编导致卡顿、且是"多一块屏"而非"一套键鼠控两台"。
 相关配置、证书、凭据已全部清除，详见 `kvm-share/README.md`。
+
+## ⚠️ 开源说明：安全与已知问题
+
+这套东西是按「两台自己的机器、同一个可信内网」设计的，**不要直接搬到公网环境**。
+
+- **明文传输**：Deskflow 关掉了 TLS 与指纹校验（`tlsEnabled=false` / `checkPeerFingerprints=false`），
+  Surface 侧 `barrierc` 带 `--disable-crypto`。会话内容在网络上不加密。
+- **自动授权**：`deskflow-autogrant.sh` 用 ydotool 自动点掉 GNOME 的「Capture Input」门户对话框，
+  等于跳过人工确认。理解含义后再启用（不装则每次连接手点一下即可）。
+- **剪贴板桥已废弃**：`clipbridge` 每秒 `wl-paste` / `xclip -o` 各一次，并在同步时抢一次剪贴板
+  selection 所有权。实测会让 fcitx5 的组字状态被打断（打字打到一半被吞）。**新装默认不要启用**，
+  详见 [`kvm-share/README.md`](kvm-share/README.md) 的「剪贴板桥的坑」。
+- **主机名/IP/ssh 别名是作者环境的写法**：`i5-5200u`、`chenwei-Surface-Pro`、`192.168.100.188`、
+  `surface`、`sun`，直接套用前请替换成你自己的（`install-host.sh` / `install-surface.sh` 支持用
+  `PEER=` / `HOST_IP=` 覆盖）。
 
 ## 已验证环境
 
