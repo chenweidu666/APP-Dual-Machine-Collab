@@ -130,13 +130,22 @@ Deskflow 1.26 默认强制 TLS（`~/.config/Deskflow/tls/deskflow.pem`），
 Wayland 下抓全局输入必须经 `org.freedesktop.portal.RemoteDesktop`，
 GNOME 会弹 **「Capture Input / Allow Remote Input Capturing」** 模态框，**sudo 也替不了**（这是安全门，不是权限问题）。
 
-`deskflow-autogrant.sh` 的做法：
+`deskflow-autogrant.sh` 目前是**尽力而为**，实测无法稳定自动化，原因：
 
-1. 只在 `xdg-desktop-portal-gnome` 日志出现 `Failed to associate portal window`（=对话框真的弹了）时才动作
-2. 用 `ydotool` 发送 `Tab → 空格（打开开关）→ Tab → Enter（Share）`
-3. 挂在 `deskflow-server.service` 的 `ExecStartPost`，通过 `systemd-run --user` 起在独立 cgroup，重启服务时不会被连带杀掉
+1. 「Allow Remote Input Capturing」是开关，状态会沿用上一次的选择，用 Tab 无法判断当前状态
+2. 确认时若开关是关闭，门户直接返回 `CreateSession canceled`，deskflow 随即退出
+3. 从对话框出现到被取消只有约 2 秒，注入按键的时间窗极窄（实测约 50% 成功率）
 
-> 注意：这实质上是**自动批准一个权限弹窗**。只建议在自己的机器、自己可控的环境里这么做。
+实测过的方案：`Tab→Space→Tab→Enter`、`Space→Tab→Enter`、`Enter`、`Alt+S` 助记键、
+绝对坐标鼠标点击（开关/Share），都只能偶发成功。
+
+脚本现在的行为：检测到对话框就按一次 Enter（开关默认是开的，直接确认大概率成功），
+失败只写日志，**不会重启服务刷屏**。配合 `deskflow-server.service` 的
+`StartLimitIntervalSec=180` / `StartLimitBurst=6` / `RestartSec=10`，
+即使失败也最多几分钟内试几次就安静停下。
+
+**最稳的用法**：托盘图标 → 开启共享 → 弹出的对话框上点一次 **Share**（开关默认已开）。
+每次 deskflow 重新启动（含每次登录）需要点这一次，这是 GNOME 的安全门，`sudo` 绕不过。
 
 ### 3. 剪贴板为什么要自己写桥
 
