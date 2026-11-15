@@ -30,6 +30,7 @@
 ## 目录结构
 
 ```
+bin/kvm-indicator.py           # 右上角托盘状态图标（host/client 两种角色）
 host/                          # 装在主机（键鼠所在的机器）
   bin/kvm-share.sh             # 开关脚本：toggle/start/stop/status
   bin/clipbridge.sh            # 剪贴板双向同步桥
@@ -37,14 +38,35 @@ host/                          # 装在主机（键鼠所在的机器）
   deskflow/Deskflow.conf       # Deskflow 主配置（服务端模式、关 TLS、开剪贴板）
   deskflow/screen-layout.conf  # 屏幕拓扑（上下排布）
   desktop/键鼠共享.desktop      # 桌面图标（点一下开关共享）
-  systemd-user/*.service       # deskflow-server / clipbridge 用户服务
+  systemd-user/*.service       # deskflow-server / clipbridge / kvm-indicator
 surface/                       # 装在 Surface（被控端）
   bin/surface-tune.sh          # 解除 pstate 频率上限（perf/balanced/powersave）
   systemd/barrier-client.service
   systemd/surface-tune.service
+  systemd/kvm-indicator.service
 install-host.sh                # 主机一键安装
 install-surface.sh             # Surface 一键安装（可直接 scp 过去跑）
 ```
+
+## 右上角状态图标
+
+两端都会在 GNOME 顶栏（右上角）显示一个托盘项，肉眼就能确认共享状态：
+
+| 图标 | 文字 | 含义 |
+|---|---|---|
+| ⌨ | `KVM` | 已连接，键鼠+剪贴板共享中 |
+| ⓘ | `KVM…` | 服务已起，等待对端连接 |
+| ⛔ | `KVM —` | 已关闭，键鼠只在本机 |
+
+点击图标有菜单：状态详情、角色、`开启/关闭共享`、`刷新状态`、`隐藏指示器`。
+
+实现方式：`bin/kvm-indicator.py`（Python + GTK3 + AyatanaAppIndicator3），由 systemd 用户服务
+`kvm-indicator.service` 常驻，每 3 秒刷新一次状态。依赖 Ubuntu 默认启用的
+**ubuntu-appindicators** 扩展（GNOME 自带的托盘支持）。
+
+> 也可以做成 GNOME Shell 扩展（`St.BoxLayout` + `addToStatusArea`），显示文字更自由，
+> 但 **Wayland 下新装扩展必须注销重登才会加载**，所以这里选择托盘方案，改完立即生效。
+
 
 ## 依赖
 

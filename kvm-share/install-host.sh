@@ -21,6 +21,7 @@ fi
 echo "== 安装脚本到 ~/bin =="
 mkdir -p "$HOME/bin"
 install -m 755 "$here"/host/bin/*.sh "$HOME/bin/"
+install -m 755 "$here"/bin/kvm-indicator.py "$HOME/bin/"
 
 echo "== 安装 Deskflow 配置 =="
 mkdir -p "$HOME/.config/Deskflow"
@@ -49,6 +50,7 @@ systemctl --user enable --now ydotool 2>/dev/null || true
 systemctl --user enable --now deskflow-server
 sleep 2
 systemctl --user enable --now clipbridge
+systemctl --user enable --now kvm-indicator
 
 echo "== 桌面图标 =="
 mkdir -p "$HOME/Desktop"
@@ -59,4 +61,5 @@ echo
 echo "完成。状态："
 systemctl --user is-active deskflow-server clipbridge ydotool | paste -sd' ' -
 echo "桌面图标: ~/Desktop/键鼠共享.desktop（点一下开关）"
+echo "顶栏状态: 右上角托盘「⌨ KVM」，点击可开关"
 echo "命令行:   ~/bin/kvm-share.sh [toggle|start|stop|status]"

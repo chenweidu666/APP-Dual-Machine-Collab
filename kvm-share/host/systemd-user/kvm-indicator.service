@@ -1,0 +1,13 @@
+[Unit]
+Description=KVM share indicator (右上角状态图标)
+After=graphical-session.target deskflow-server.service
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 %h/bin/kvm-indicator.py host
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=graphical-session.target

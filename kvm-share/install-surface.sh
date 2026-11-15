@@ -12,14 +12,18 @@ echo "被控端 = $PEER ($PEER_NAME)，服务端 = $HOST_IP"
 
 echo "== 传文件 =="
 scp -q "$here"/surface/bin/surface-tune.sh "$PEER":/tmp/surface-tune.sh
+scp -q "$here"/bin/kvm-indicator.py "$PEER":/tmp/kvm-indicator.py
+scp -q "$here"/surface/systemd/kvm-indicator.service "$PEER":/tmp/kvm-indicator.service
 scp -q "$here"/surface/systemd/barrier-client.service "$PEER":/tmp/barrier-client.service.tpl
 scp -q "$here"/surface/systemd/surface-tune.service "$PEER":/tmp/surface-tune.service
 
 echo "== 安装依赖 + 落地文件 =="
 ssh "$PEER" "bash -s" <<EOF
 set -e
-sudo apt-get install -y barrier xclip xdotool >/dev/null
+sudo apt-get install -y barrier xclip xdotool gir1.2-ayatanaappindicator3-0.1 >/dev/null
 
+install -m 755 /tmp/kvm-indicator.py ~/bin/kvm-indicator.py
+install -m 644 /tmp/kvm-indicator.service ~/.config/systemd/user/
 sudo install -m 755 /tmp/surface-tune.sh /usr/local/bin/surface-tune.sh
 sudo install -m 644 /tmp/surface-tune.service /etc/systemd/system/surface-tune.service
 
@@ -31,6 +35,7 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now surface-tune.service
 systemctl --user daemon-reload
 systemctl --user enable --now barrier-client
+systemctl --user enable --now kvm-indicator
 
 echo "== 状态 =="
 echo "barrier-client: \$(systemctl --user is-active barrier-client) / \$(systemctl --user is-enabled barrier-client)"

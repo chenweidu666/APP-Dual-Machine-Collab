@@ -1,0 +1,14 @@
+[Unit]
+Description=KVM share indicator (右上角状态图标 - 被控端)
+After=graphical-session.target barrier-client.service
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+Environment=DISPLAY=:0
+ExecStart=/usr/bin/python3 %h/bin/kvm-indicator.py client
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=graphical-session.target

@@ -37,6 +37,7 @@ edge-bookmarks/            # Edge 收藏夹同步（多机整份覆盖 + 备份�
 | 键鼠共享 | 桌面图标 `键鼠共享`，或 `~/bin/kvm-share.sh toggle` | 光标推过主机**下边缘**进 Surface，推回上边缘回来 |
 | 剪贴板 | 自动（`clipbridge` 服务） | 双向文本同步，约 1 秒延迟，不支持图片/文件 |
 | 收藏夹同步 | `edge-bookmarks/edge-bookmark-sync.sh` | 以 `sun` 为准整份覆盖本机 + Surface，自动备份可回滚 |
+| 状态一眼看 | 右上角托盘 `⌨ KVM` | `KVM` 已连 / `KVM…` 等待 / `KVM —` 关闭，点击可开关 |
 
 ## 安装
 
@@ -62,6 +63,7 @@ cd ../edge-bookmarks && ./edge-bookmark-sync.sh
 | `barrier-client` (systemd user) | Surface | 连主机 24800，XTest 注入输入 |
 | `surface-tune.sh` (systemd) | Surface | 解除 pstate 频率上限：满载 900 MHz → 1.7 GHz |
 | `edge-bookmark-sync.sh` | 主机执行 | 收藏夹整份覆盖 + 备份 + MD5 校验 + `--restore` |
+| `kvm-indicator.py` (systemd user) | 两端 | 顶栏状态图标（AyatanaAppIndicator），3 秒刷新，可点击开关 |
 
 ## 为什么不用 RDP 投屏
 
